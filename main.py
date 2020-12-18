@@ -1,3 +1,4 @@
+import copy
 import csv
 import os
 
@@ -27,20 +28,19 @@ def decypher_objects_patterns(inp):
     # form corpus example
     if inp[7] is not None and inp[7].find('exampleContainer') is not None:
         corpus_example_text = html.tostring(inp[7].find('exampleContainer').find('corpusExample'), encoding='unicode')
+
+        # ugly postprocessing to remove xmlns:xsi=... duh..
+        root = etree.fromstring(corpus_example_text)
+
+        # Remove namespace prefixes
+        for elem in root.getiterator():
+            elem.tag = etree.QName(elem).localname
+        # Remove unused namespace declarations
+        etree.cleanup_namespaces(root)
+
+        inp[7] = etree.tostring(root, encoding='unicode')
     else:
-        print(inp)
-        return inp
-
-    # ugly postprocessing to remove xmlns:xsi=... duh..
-    root = etree.fromstring(corpus_example_text)
-
-    # Remove namespace prefixes
-    for elem in root.getiterator():
-        elem.tag = etree.QName(elem).localname
-    # Remove unused namespace declarations
-    etree.cleanup_namespaces(root)
-
-    inp[7] = etree.tostring(root, encoding='unicode')
+        inp[7] = ''
 
     return inp
 
@@ -82,8 +82,8 @@ if __name__ == '__main__':
     res_patterns = []
     for file in sorted(os.listdir(inpt)):
         path = os.path.join(inpt, file)
-        x2c_gf = X2c(path, commands_gf)
-        x2c_patterns = X2c(path, commands_patterns)
+        x2c_gf = X2c(path, copy.deepcopy(commands_gf))
+        x2c_patterns = X2c(path, copy.deepcopy(commands_patterns))
         res_gf.extend(x2c_gf.to_list(decypher_objects_statistics))
         res_patterns.extend(x2c_patterns.to_list(decypher_objects_patterns))
 
